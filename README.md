@@ -55,7 +55,11 @@ Los archivos optimizados se generarán en la carpeta `dist/`.
 2. Ve a [Vercel](https://vercel.com) e inicia sesión
 3. Haz clic en "New Project"
 4. Importa tu repositorio de GitHub
-5. Vercel detectará automáticamente la configuración de Vite
+5. **Configuración importante en Vercel:**
+   - **Framework Preset**: Selecciona "Vite" o déjalo en "Other"
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+   - **Install Command**: `npm install`
 6. Haz clic en "Deploy"
 
 ### Opción 2: Despliegue desde CLI
@@ -74,7 +78,19 @@ vercel
 
 ### Configuración de Vercel
 
-El proyecto incluye un archivo `vercel.json` que configura las rutas de la API. No se requiere configuración adicional.
+El proyecto incluye un archivo `vercel.json` que configura las rutas de la API y las rewrites para la SPA.
+
+**Si obtienes error 404 después del despliegue:**
+
+1. Verifica en la configuración del proyecto en Vercel:
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+   - **Framework Preset**: Vite (o "Other" si no está disponible)
+
+2. Asegúrate de que el archivo `vercel.json` esté en la raíz del proyecto
+
+3. Si el problema persiste, en la configuración del proyecto en Vercel, agrega manualmente:
+   - **Root Directory**: `.` (raíz del proyecto)
 
 **Nota sobre el almacenamiento de leads**: 
 - En desarrollo, los leads se guardan en `data/leads.json`
