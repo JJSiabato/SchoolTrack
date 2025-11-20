@@ -1,10 +1,11 @@
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
-import os from 'os'
+import { createClient } from '@supabase/supabase-js'
+import dotenv from 'dotenv'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+// Cargar variables de entorno desde .env en desarrollo local
+// En Vercel, las variables se cargan automáticamente desde la configuración
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  dotenv.config()
+}
 
 export default async function handler(req, res) {
   // Habilitar CORS
@@ -21,6 +22,21 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Verificar que las variables de entorno estén configuradas
+    const supabaseUrl = process.env.SUPABASE_URL
+    const supabaseKey = process.env.SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Supabase credentials missing')
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Configuración del servidor incompleta' 
+      })
+    }
+
+    // Inicializar cliente de Supabase
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
     const { nombre, rol, institucion, email, mensaje } = req.body
 
     // Validación de campos
@@ -40,48 +56,33 @@ export default async function handler(req, res) {
       })
     }
 
-    // Determinar ruta de datos (en desarrollo usa ./data, en producción /tmp)
-    const isProduction = process.env.VERCEL === '1'
-    const dataDir = isProduction 
-      ? path.join(os.tmpdir(), 'schooltrack-data')
-      : path.join(__dirname, '..', 'data')
-    
-    // Crear carpeta data si no existe
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true })
+    // Insertar en Supabase
+    const { data, error } = await supabase
+      .from('registro')
+      .insert([
+        {
+          nombre,
+          rol,
+          institucion,
+          email,
+          mensaje,
+          created_at: new Date().toISOString()
+        }
+      ])
+      .select()
+
+    if (error) {
+      console.error('Supabase error:', error)
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Error al guardar los datos' 
+      })
     }
 
-    // Leer leads existentes o crear array vacío
-    const leadsFile = path.join(dataDir, 'leads.json')
-    let leads = []
-    
-    if (fs.existsSync(leadsFile)) {
-      try {
-        const fileContent = fs.readFileSync(leadsFile, 'utf-8')
-        leads = JSON.parse(fileContent)
-      } catch (e) {
-        console.error('Error reading leads file:', e)
-        leads = []
-      }
-    }
-
-    // Agregar nuevo lead
-    const newLead = {
-      id: Date.now().toString(),
-      nombre,
-      rol,
-      institucion,
-      email,
-      mensaje,
-      fecha: new Date().toISOString()
-    }
-
-    leads.push(newLead)
-
-    // Guardar en archivo
-    fs.writeFileSync(leadsFile, JSON.stringify(leads, null, 2), 'utf-8')
-
-    return res.status(200).json({ success: true })
+    return res.status(200).json({ 
+      success: true, 
+      data: data[0] 
+    })
   } catch (error) {
     console.error('Error processing contact form:', error)
     return res.status(500).json({ 

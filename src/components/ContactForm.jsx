@@ -1,6 +1,21 @@
 import { motion } from 'framer-motion'
 import { useState } from 'react'
 import Button from './Button'
+import { supabase } from '../utils/supabase'
+
+const addDocument = async (data) => { 
+  const { error } = await supabase
+      .from('registro')
+      .insert([
+        { ...data }
+      ]);
+  if (error) {
+    console.error("Error al registrar");
+  } else {
+    console.log("Registro exitoso");
+  }
+};
+
 
 const ContactForm = ({ onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -26,35 +41,35 @@ const ContactForm = ({ onSuccess }) => {
     setSubmitStatus(null)
 
     try {
-      const response = await fetch('/api/contact', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+      await addDocument(formData)
+      setSubmitStatus('success')
+      setFormData({
+        nombre: '',
+        rol: '',
+        institucion: '',
+        email: '',
+        mensaje: ''
       })
-
-      const data = await response.json()
-
-      if (data.success) {
-        setSubmitStatus('success')
-        setFormData({
-          nombre: '',
-          rol: '',
-          institucion: '',
-          email: '',
-          mensaje: ''
-        })
-        if (onSuccess) {
-          setTimeout(() => {
-            onSuccess()
-          }, 2000)
-        }
-      } else {
-        setSubmitStatus('error')
+      if (onSuccess) {
+        setTimeout(() => {
+          onSuccess()
+        }, 2000)
       }
     } catch (error) {
+      console.error('Error submitting form:', error)  
       setSubmitStatus('error')
+      setFormData({
+        nombre: '',
+        rol: '',
+        institucion: '',
+        email: '',
+        mensaje: ''
+      })
+      if (onError) {
+        setTimeout(() => {
+          onError()
+        }, 2000)
+      }
     } finally {
       setIsSubmitting(false)
     }
